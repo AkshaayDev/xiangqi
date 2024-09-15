@@ -62,7 +62,6 @@ resetBoard();
 function getCanvasPos(x, y) {
 	let resX = xOffset + x * interval;
 	let resY = yOffset + y * interval;
-	if (y > 4) { resY += interval; }
 	return [resX, resY];
 }
 function getName(id) {
@@ -80,9 +79,17 @@ function renderBoard(board, lang) {
 	}
 	for (let i = 0; i < 9; i++) {
 		let pos1 = getCanvasPos(i, 0);
-		let pos2 = getCanvasPos(i, 9);
+		let pos4 = getCanvasPos(i, 9);
+		if (i === 0 || i === 8) {
+			ctx.moveTo(pos1[0], pos1[1]);
+			ctx.lineTo(pos4[0], pos4[1]);
+		}
+		let pos2 = getCanvasPos(i, 4);
+		let pos3 = getCanvasPos(i, 5);
 		ctx.moveTo(pos1[0], pos1[1]);
 		ctx.lineTo(pos2[0], pos2[1]);
+		ctx.moveTo(pos3[0], pos3[1]);
+		ctx.lineTo(pos4[0], pos4[1]);
 	}
 	let pos1 = getCanvasPos(3, 0);
 	let pos2 = getCanvasPos(5, 2);
@@ -113,7 +120,7 @@ function renderBoard(board, lang) {
 			img.addEventListener("load", () => {
 				ctx.drawImage(
 					img,
-						pos[0] - pieceSize/2,
+					pos[0] - pieceSize/2,
 					pos[1] - pieceSize/2,
 					pieceSize,
 					pieceSize
