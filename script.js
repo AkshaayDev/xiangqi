@@ -1,17 +1,3 @@
-/*
-Empty = 0
-Soldier = 1
-Cannon = 2
-Chariot = 3
-Horse = 4
-Elephant = 5
-Advisor = 6
-General = 7
-
-Red = +
-Black = -
-
-*/
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 let board = [];
@@ -59,30 +45,28 @@ function resetBoard() {
 }
 resetBoard();
 
-function getCanvasPos(x, y) {
-	let resX = xOffset + x * interval;
-	let resY = yOffset + y * interval;
-	return [resX, resY];
-}
-function getName(id) {
-	return types[Math.abs(id) - 1];
-}
+const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
+const getName = (id) => types[Math.abs(id) - 1];
+
 function renderBoard(board, lang) {
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	ctx.beginPath();
-	
+
+	// Draw grid
 	for (let i = 0; i < 10; i++) {
 		let pos1 = getCanvasPos(0, i);
 		let pos2 = getCanvasPos(8, i);
 		ctx.moveTo(pos1[0], pos1[1]);
 		ctx.lineTo(pos2[0], pos2[1])
 	}
+	// Draw grid but without river.
 	for (let i = 0; i < 9; i++) {
 		let pos1 = getCanvasPos(i, 0);
 		let pos4 = getCanvasPos(i, 9);
 		if (i === 0 || i === 8) {
 			ctx.moveTo(pos1[0], pos1[1]);
 			ctx.lineTo(pos4[0], pos4[1]);
+			continue;
 		}
 		let pos2 = getCanvasPos(i, 4);
 		let pos3 = getCanvasPos(i, 5);
@@ -91,24 +75,22 @@ function renderBoard(board, lang) {
 		ctx.moveTo(pos3[0], pos3[1]);
 		ctx.lineTo(pos4[0], pos4[1]);
 	}
-	let pos1 = getCanvasPos(3, 0);
-	let pos2 = getCanvasPos(5, 2);
-	let pos3 = getCanvasPos(3, 2);
-	let pos4 = getCanvasPos(5, 0);
-	let pos5 = getCanvasPos(3, 7);
-	let pos6 = getCanvasPos(5, 9);
-	let pos7 = getCanvasPos(3, 9);
-	let pos8 = getCanvasPos(5, 7);
-	ctx.moveTo(pos1[0], pos1[1]);
-	ctx.lineTo(pos2[0], pos2[1]);
-	ctx.moveTo(pos3[0], pos3[1]);
-	ctx.lineTo(pos4[0], pos4[1]);
-	ctx.moveTo(pos5[0], pos5[1]);
-	ctx.lineTo(pos6[0], pos6[1]);
-	ctx.moveTo(pos7[0], pos7[1]);
-	ctx.lineTo(pos8[0], pos8[1]);
+	// Draw palace
+	let lines = [
+		[[3,0],[5,2]],
+		[[3,2],[5,0]],
+		[[3,7],[5,9]],
+		[[3,9],[5,7]],
+	];
+	lines.forEach(line => {
+		let pos1 = getCanvasPos(line[0][0], line[0][1]);
+		let pos2 = getCanvasPos(line[1][0], line[1][1]);
+		ctx.moveTo(pos1[0], pos1[1]);
+		ctx.lineTo(pos2[0], pos2[1]);
+	});
 	
 	ctx.stroke();
+	// Draw pieces
 	for (let i = 0; i < 10; i++) {
 		for (let j = 0; j < 9; j++) {
 			let piece = board[i][j];
