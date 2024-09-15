@@ -1,11 +1,13 @@
 const canvas = document.getElementById("canvas");
+canvas.width = 700;
+canvas.height = 600;
 const ctx = canvas.getContext("2d");
 let board = [];
 
-const xOffset = 50;
-const yOffset = 50;
-const interval = 30;
-const pieceSize = 30;
+const xOffset = 30;
+const yOffset = 30;
+const interval = 50;
+const pieceSize = 40;
 
 ctx.lineWidth = 2;
 ctx.fillStyle = "#ede995";
