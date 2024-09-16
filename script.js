@@ -1,5 +1,5 @@
 const canvas = document.getElementById("canvas");
-canvas.width = 700;
+canvas.width = 600;
 canvas.height = 600;
 const ctx = canvas.getContext("2d");
 let board = [];
@@ -15,9 +15,11 @@ let images = {};
 
 const types = ["soldier", "cannon", "chariot", "horse", "elephant", "advisor", "general"];
 const colors = ["r", "b"];
-const langs = ["en", "ch"];
+const langs = ["ch", "en"];
 
-async function loadImages() {
+let lang = "ch";
+
+function loadImages() {
 	langs.forEach(lang => {
 		images[lang] = {};
 		types.forEach(type => {
@@ -49,8 +51,18 @@ resetBoard();
 
 const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
 const getName = (id) => types[Math.abs(id) - 1];
+const getCol = (id) => id > 0 ? "r" : "b";
 
+function getMoves(x, y) {
+	let piece = board[y][x];
+	let col = getCol(piece);
+	piece = Math.abs(piece);
+	switch (piece) {
+		
+	}
+}
 function renderBoard(board, lang) {
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	ctx.beginPath();
 
@@ -61,7 +73,7 @@ function renderBoard(board, lang) {
 		ctx.moveTo(pos1[0], pos1[1]);
 		ctx.lineTo(pos2[0], pos2[1])
 	}
-	// Draw grid but without river.
+	// Draw grid and river.
 	for (let i = 0; i < 9; i++) {
 		let pos1 = getCanvasPos(i, 0);
 		let pos4 = getCanvasPos(i, 9);
@@ -99,9 +111,8 @@ function renderBoard(board, lang) {
 			if (piece === 0) { continue; }
 			
 			let pos = getCanvasPos(j, i);
-			let img = images[lang][getName(piece)][piece > 0 ? "r" : "b"];
-			
-			img.addEventListener("load", () => {
+			let img = images[lang][getName(piece)][getCol(piece)];
+			const draw = () => {
 				ctx.drawImage(
 					img,
 					pos[0] - pieceSize/2,
@@ -109,9 +120,11 @@ function renderBoard(board, lang) {
 					pieceSize,
 					pieceSize
 				);
-			});
+			}
+			img.addEventListener("load", draw);
+			if (img.complete) { draw(); }
 		}
 	}
 }
 
-renderBoard(board, "ch");
+renderBoard(board, lang);
