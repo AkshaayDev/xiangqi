@@ -1,23 +1,28 @@
 const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Config constants
 canvas.width = 600;
 canvas.height = 600;
-const ctx = canvas.getContext("2d");
-let board = [];
-
-const xOffset = 30;
-const yOffset = 30;
+const xOffset = 70;
+const yOffset = 50;
 const interval = 50;
 const pieceSize = 40;
-
 ctx.lineWidth = 2;
-ctx.fillStyle = "#ede995";
 let images = {};
 
+// Game variables
+let lang = "ch";
+let board = [];
+
+// Game constants
 const types = ["soldier", "cannon", "chariot", "horse", "elephant", "advisor", "general"];
 const colors = ["r", "b"];
 const langs = ["ch", "en"];
 
-let lang = "ch";
+const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
+const getName = (id) => types[Math.abs(id) - 1];
+const getCol = (id) => id > 0 ? "r" : "b";
 
 function loadImages() {
 	langs.forEach(lang => {
@@ -49,31 +54,19 @@ function resetBoard() {
 }
 resetBoard();
 
-const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
-const getName = (id) => types[Math.abs(id) - 1];
-const getCol = (id) => id > 0 ? "r" : "b";
-
-function getMoves(x, y) {
-	let piece = board[y][x];
-	let col = getCol(piece);
-	piece = Math.abs(piece);
-	switch (piece) {
-		
-	}
-}
-function renderBoard(board, lang) {
+function renderBoard() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.fillStyle = "#ede995";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	ctx.beginPath();
-
-	// Draw grid
+	// Draw horizontal lines
 	for (let i = 0; i < 10; i++) {
 		let pos1 = getCanvasPos(0, i);
 		let pos2 = getCanvasPos(8, i);
 		ctx.moveTo(pos1[0], pos1[1]);
 		ctx.lineTo(pos2[0], pos2[1])
 	}
-	// Draw grid and river.
+	// Draw vertical lines and river.
 	for (let i = 0; i < 9; i++) {
 		let pos1 = getCanvasPos(i, 0);
 		let pos4 = getCanvasPos(i, 9);
@@ -107,12 +100,12 @@ function renderBoard(board, lang) {
 	// Draw pieces
 	for (let i = 0; i < 10; i++) {
 		for (let j = 0; j < 9; j++) {
-			let piece = board[i][j];
+			let piece = board[i][j];	
 			if (piece === 0) { continue; }
 			
 			let pos = getCanvasPos(j, i);
 			let img = images[lang][getName(piece)][getCol(piece)];
-			const draw = () => {
+			const drawPiece = () => {
 				ctx.drawImage(
 					img,
 					pos[0] - pieceSize/2,
@@ -120,11 +113,46 @@ function renderBoard(board, lang) {
 					pieceSize,
 					pieceSize
 				);
-			}
-			img.addEventListener("load", draw);
-			if (img.complete) { draw(); }
+			};
+			img.addEventListener("load", drawPiece);
+			if (img.complete) { drawPiece(); }
 		}
 	}
 }
+function switchLang() {
+	lang = (lang == "en") ? "ch" : "en";
+	renderBoard();
+}
+
+function getMoves(x, y) {
+	let moves = [];
+	let piece = board[y][x];
+	let col = getCol(piece);
+	piece = Math.abs(piece);
+	switch (piece) {
+		case 1:
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		case 6:
+			break;
+		case 7:
+			break;
+	}
+	return moves;
+}
+
+canvas.addEventListener("click", (event) => {
+	const rect = canvas.getBoundingClientRect();
+	let x = Math.floor((event.clientX - rect.left - xOffset + interval/2) / interval);
+	let y = Math.floor((event.clientY - rect.top - yOffset + interval/2) / interval);
+	if (x < 0 || x > 8 || y < 0 || y > 9) { return; }
+});
 
 renderBoard(board, lang);
