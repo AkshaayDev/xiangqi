@@ -126,10 +126,13 @@ function switchLang() {
 
 function getMoves(x, y) {
 	let moves = [];
+	
 	let piece = board[y][x];
 	let col = getCol(piece);
-	piece = Math.abs(piece);
-	switch (piece) {
+	const isAlly = (p1, p2) => (p1 > 0) === (p2 > 0);
+	const isSide = (p, y) => (p > 0) === (y > 4);
+	
+	switch (Math.abs(piece)) {
 		case 1:
 			break;
 		case 2:
@@ -150,9 +153,17 @@ function getMoves(x, y) {
 
 canvas.addEventListener("click", (event) => {
 	const rect = canvas.getBoundingClientRect();
-	let x = Math.floor((event.clientX - rect.left - xOffset + interval/2) / interval);
-	let y = Math.floor((event.clientY - rect.top - yOffset + interval/2) / interval);
-	if (x < 0 || x > 8 || y < 0 || y > 9) { return; }
+	let x = event.clientX - rect.left;
+	let y = event.clientY - rect.top;
+	let xGrid = Math.floor((x - xOffset + interval/2) / interval);
+	let yGrid = Math.floor((y - yOffset + interval/2) / interval);
+	if (xGrid < 0 || xGrid > 8 || yGrid < 0 || yGrid > 9) { return; }
+
+	let pos = getCanvasPos(xGrid, yGrid);
+	let dxSquared = (pos[0] - x) ** 2;
+	let dySquared = (pos[1] - y) ** 2;
+	let rSquared = (pieceSize / 2) ** 2;
+	if (dxSquared + dySquared > rSquared) { return; }
 });
 
 renderBoard(board, lang);
