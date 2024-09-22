@@ -169,23 +169,47 @@ function getMoves(x, y) {
 			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river.
 			for (let i = -1; i <= 1; i+= 2) {
 				for (let j = -1; j <= 1; j+= 2) {
-					let xNew = x + i, yNew = y + j;
-					if (xNew < 0 || xNew > 8 || yNew < 0 || yNew > 9) { continue; }
-					if (!isSide(piece, yNew)) { continue; }
-					xNew += i; yNew += j;
+					let xBlock = x + i, yBlock = y + j;
+					if (xBlock < 0 || xBlock > 8 || yBlock < 0 || yBlock > 9) { continue; }
+					if (!isSide(piece, yBlock)) { continue; }
+					let xNew = x + 2*i, yNew = y + 2*j;
 					if (isAlly(piece, board[yNew][xNew])) { continue; }
 					moves.push([xNew, yNew]);
 				}
 			}
 			break;
 		case 6:
-			// Advisor - Moves diagonally by one andstays in the palace.
+			// Advisor - Moves diagonally by one and stays in the palace.
 			break;
 		case 7:
 			// General - Moves orthogonally by one and stays in the palace.
 			break;
 	}
 	return moves;
+}
+
+function select(x, y) {
+	if (board[y][x] === 0) { return; }
+	if (getCol(board[y][x]) !== turn) { return; }
+	selected = [x, y];
+
+	const drawCircle = (x, y, col) => {
+		let pos = getCanvasPos(x, y);
+		ctx.strokeStyle = col;
+		ctx.beginPath();
+		ctx.arc(pos[0], pos[1], pieceSize/2, 0, 2 * Math.PI);
+		ctx.stroke();
+	}
+	drawCircle(x, y, "#ffff00");
+	getMoves(x, y).forEach(move => drawCircle(move[0], move[1], "#0000ff"));
+}
+function move(x, y) {
+	let selectedPiece = board[selected[1]][selected[0]];
+	board[selected[1]][selected[0]] = 0;
+	board[y][x] = selectedPiece;
+	selected = null;
+	turn = turn == "r" ? "b" : "r";
+	renderBoard();
 }
 
 canvas.addEventListener("click", (event) => {
@@ -202,27 +226,8 @@ canvas.addEventListener("click", (event) => {
 	let rSquared = (pieceSize / 2) ** 2;
 	if (dxSquared + dySquared > rSquared) { return; }
 
-	if (!selected) {
-		// Select a piece
-		if (board[yGrid][xGrid] === 0) { return; }
-		if (getCol(board[yGrid][xGrid]) !== turn) { return; }
-		selected = [xGrid, yGrid];
-		getMoves(xGrid,yGrid).forEach(m=>{
-			let pos = getCanvasPos(m[0], m[1]);
-			ctx.beginPath();
-			ctx.arc(pos[0], pos[1], pieceSize/2, 0, 2 * Math.PI);
-			ctx.strokeStyle = "#0000ff";
-			ctx.stroke();
-		});
-	} else {
-		// Move the selected piece
-		let selectedPiece = board[selected[1]][selected[0]];
-		board[selected[1]][selected[0]] = 0;
-		board[yGrid][xGrid] = selectedPiece;
-		selected = null;
-		turn = turn == "r" ? "b" : "r";
-		renderBoard();
-	}
+	if (!selected) { select(xGrid, yGrid); }
+	else { move(xGrid, yGrid); }
 });
 
 renderBoard(board, lang);
