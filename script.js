@@ -60,6 +60,8 @@ function renderBoard() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = "#ede995";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	ctx.strokeStyle = "#000000";
 	ctx.beginPath();
 	// Draw horizontal lines
 	for (let i = 0; i < 10; i++) {
@@ -126,28 +128,61 @@ function switchLang() {
 	renderBoard();
 }
 
+const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
+const isSide = (p, y) => (p > 0) === (y > 4);
 function getMoves(x, y) {
 	let moves = [];
 	
 	let piece = board[y][x];
 	let col = getCol(piece);
-	const isAlly = (p1, p2) => (p1 > 0) === (p2 > 0);
-	const isSide = (p, y) => (p > 0) === (y > 4);
-	
-	switch (Math.abs(piece)) {
+
+	// A piece cannot move to a space occupied by an ally piece
+	let type = Math.abs(piece)
+	switch (type) {
 		case 1:
+			// Soldier - Moves forward and if it crosses the river, sideways too.
+			let yNew = (col === "r") ? y-1 : y+1;
+			if (yNew >= 0 && yNew <= 9 && !isAlly(piece, board[yNew][x])) {
+				moves.push([x, yNew]);
+			}
+			if (!isSide(piece, y)) {
+				let xLeft = x - 1;
+				let xRight = x + 1;
+				if (xLeft >= 0 && !isAlly(piece, board[y][xLeft])) {
+					moves.push([xLeft, y]);
+				}
+				if (xRight <= 8 && !isAlly(piece, board[y][xRight])) {
+					moves.push([xRight, y])
+				}
+			}
 			break;
 		case 2:
+			// Cannon - Moves orthogonally but captures by crossing over another piece.
 			break;
 		case 3:
+			// Chariot - Moves and captures orthogonally.
 			break;
 		case 4:
+			// Horse - Moves in an L shape but can be blocked by neighbouring pieces.
 			break;
 		case 5:
+			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river.
+			for (let i = -1; i <= 1; i+= 2) {
+				for (let j = -1; j <= 1; j+= 2) {
+					let xNew = x + i, yNew = y + j;
+					if (xNew < 0 || xNew > 8 || yNew < 0 || yNew > 9) { continue; }
+					if (!isSide(piece, yNew)) { continue; }
+					xNew += i; yNew += j;
+					if (isAlly(piece, board[yNew][xNew])) { continue; }
+					moves.push([xNew, yNew]);
+				}
+			}
 			break;
 		case 6:
+			// Advisor - Moves diagonally by one andstays in the palace.
 			break;
 		case 7:
+			// General - Moves orthogonally by one and stays in the palace.
 			break;
 	}
 	return moves;
@@ -172,6 +207,13 @@ canvas.addEventListener("click", (event) => {
 		if (board[yGrid][xGrid] === 0) { return; }
 		if (getCol(board[yGrid][xGrid]) !== turn) { return; }
 		selected = [xGrid, yGrid];
+		getMoves(xGrid,yGrid).forEach(m=>{
+			let pos = getCanvasPos(m[0], m[1]);
+			ctx.beginPath();
+			ctx.arc(pos[0], pos[1], pieceSize/2, 0, 2 * Math.PI);
+			ctx.strokeStyle = "#0000ff";
+			ctx.stroke();
+		});
 	} else {
 		// Move the selected piece
 		let selectedPiece = board[selected[1]][selected[0]];
