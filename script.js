@@ -70,7 +70,7 @@ function renderBoard() {
 		ctx.moveTo(pos1[0], pos1[1]);
 		ctx.lineTo(pos2[0], pos2[1])
 	}
-	// Draw vertical lines and river.
+	// Draw vertical lines and river
 	for (let i = 0; i < 9; i++) {
 		let pos1 = getCanvasPos(i, 0);
 		let pos4 = getCanvasPos(i, 9);
@@ -140,7 +140,7 @@ function getMoves(x, y) {
 	let type = Math.abs(piece)
 	switch (type) {
 		case 1:
-			// Soldier - Moves forward and if it crosses the river, sideways too.
+			// Soldier - Moves forward and if it crosses the river, sideways too
 			let yNew = (col === "r") ? y-1 : y+1;
 			if (yNew >= 0 && yNew <= 9 && !isAlly(piece, board[yNew][x])) {
 				moves.push([x, yNew]);
@@ -157,32 +157,44 @@ function getMoves(x, y) {
 			}
 			break;
 		case 2:
-			// Cannon - Moves orthogonally but captures by crossing over another piece.
+			// Cannon - Moves orthogonally but captures by crossing over another piece
 			break;
 		case 3:
-			// Chariot - Moves and captures orthogonally.
+			// Chariot - Moves and captures orthogonally
 			break;
 		case 4:
-			// Horse - Moves in an L shape but can be blocked by neighbouring pieces.
+			// Horse - Moves in an L shape but can be blocked by neighbouring pieces
 			break;
 		case 5:
-			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river.
-			for (let i = -1; i <= 1; i+= 2) {
-				for (let j = -1; j <= 1; j+= 2) {
+			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river
+			for (let i = -1; i <= 1; i += 2) {
+				for (let j = -1; j <= 1; j += 2) {
 					let xBlock = x + i, yBlock = y + j;
 					if (xBlock < 0 || xBlock > 8 || yBlock < 0 || yBlock > 9) { continue; }
 					if (!isSide(piece, yBlock)) { continue; }
 					let xNew = x + 2*i, yNew = y + 2*j;
-					if (isAlly(piece, board[yNew][xNew])) { continue; }
-					moves.push([xNew, yNew]);
+					if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
 				}
 			}
 			break;
 		case 6:
-			// Advisor - Moves diagonally by one and stays in the palace.
+			// Advisor - Moves diagonally by one and stays in the palace
+			if (x === 4) {
+				// If it is at center of palace
+				for (let i = -1; i <= 1; i += 2) {
+					for (let j = -1; j <= 1; j += 2) {
+						let xNew = x + i, yNew = y + j;
+						if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
+					}
+				}
+			} else {
+				let xNew = 4;
+				let yNew = (col === "r") ? 8 : 1;
+				if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
+			}
 			break;
 		case 7:
-			// General - Moves orthogonally by one and stays in the palace.
+			// General - Moves orthogonally by one and stays in the palace
 			break;
 	}
 	return moves;
