@@ -14,6 +14,8 @@ let images = {};
 // Game variables
 let lang = "ch";
 let board = [];
+let turn = "r";
+let selected = null;
 
 // Game constants
 const types = ["soldier", "cannon", "chariot", "horse", "elephant", "advisor", "general"];
@@ -164,6 +166,21 @@ canvas.addEventListener("click", (event) => {
 	let dySquared = (pos[1] - y) ** 2;
 	let rSquared = (pieceSize / 2) ** 2;
 	if (dxSquared + dySquared > rSquared) { return; }
+
+	if (!selected) {
+		// Select a piece
+		if (board[yGrid][xGrid] === 0) { return; }
+		if (getCol(board[yGrid][xGrid]) !== turn) { return; }
+		selected = [xGrid, yGrid];
+	} else {
+		// Move the selected piece
+		let selectedPiece = board[selected[1]][selected[0]];
+		board[selected[1]][selected[0]] = 0;
+		board[yGrid][xGrid] = selectedPiece;
+		selected = null;
+		turn = turn == "r" ? "b" : "r";
+		renderBoard();
+	}
 });
 
 renderBoard(board, lang);
