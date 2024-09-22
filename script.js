@@ -173,7 +173,9 @@ function getMoves(x, y) {
 					if (xBlock < 0 || xBlock > 8 || yBlock < 0 || yBlock > 9) { continue; }
 					if (!isSide(piece, yBlock)) { continue; }
 					let xNew = x + 2*i, yNew = y + 2*j;
-					if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
+					if (!isAlly(piece, board[yNew][xNew])) {
+						moves.push([xNew, yNew]);
+					}
 				}
 			}
 			break;
@@ -184,17 +186,33 @@ function getMoves(x, y) {
 				for (let i = -1; i <= 1; i += 2) {
 					for (let j = -1; j <= 1; j += 2) {
 						let xNew = x + i, yNew = y + j;
-						if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
+						if (!isAlly(piece, board[yNew][xNew])) {
+							moves.push([xNew, yNew]);
+						}
 					}
 				}
 			} else {
 				let xNew = 4;
 				let yNew = (col === "r") ? 8 : 1;
-				if (!isAlly(piece, board[yNew][xNew])) { moves.push([xNew, yNew]); }
+				if (!isAlly(piece, board[yNew][xNew])) {
+					moves.push([xNew, yNew]);
+				}
 			}
 			break;
 		case 7:
 			// General - Moves orthogonally by one and stays in the palace
+			for (let i = -1; i <= 1; i += 2) {
+				let xNew = x + i;
+				if (xNew >= 3 && xNew <= 5 && !isAlly(piece, board[y][xNew])) {
+					moves.push([xNew, y]);
+				}
+				let yNew = y + i;
+				if (col === "r" && (yNew < 7 || yNew > 9)) { continue; }
+				if (col === "b" && (yNew < 0 || yNew > 2)) { continue; }
+				if (!isAlly(piece, board[yNew][x])) {
+					moves.push([x, yNew]);
+				}
+			}
 			break;
 	}
 	return moves;
