@@ -2,13 +2,8 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 // Config constants
-canvas.width = 600;
-canvas.height = 600;
-const xOffset = 70;
-const yOffset = 50;
-const interval = 50;
-const pieceSize = 40;
-ctx.lineWidth = 2;
+[canvas.width, canvas.height] = [600, 600];
+const [xOffset, yOffset, interval, pieceSize] = [70, 50, 50, 40];
 let images = {};
 
 // Game variables
@@ -16,29 +11,30 @@ let lang = "ch";
 let board = [];
 let turn = "r";
 let selected = null;
+let selectedMoves = [];
 
 // Game constants
 const types = ["soldier", "cannon", "chariot", "horse", "elephant", "advisor", "general"];
 const colors = ["r", "b"];
 const langs = ["ch", "en"];
 
+// Helper functions
 const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
 const getName = (id) => types[Math.abs(id) - 1];
 const getCol = (id) => id > 0 ? "r" : "b";
+const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
+const isSide = (p, y) => (p > 0) === (y > 4);
 
-function loadImages() {
-	langs.forEach(lang => {
-		images[lang] = {};
-		types.forEach(type => {
-			images[lang][type] = {};
-			colors.forEach(color => {
-				images[lang][type][color] = new Image();
-				images[lang][type][color].src = `assets/pieces/${lang}_${type}_${color}.png`;
-			});
+langs.forEach(lang => {
+	images[lang] = {};
+	types.forEach(type => {
+		images[lang][type] = {};
+		colors.forEach(color => {
+			images[lang][type][color] = new Image();
+			images[lang][type][color].src = `assets/pieces/${lang}_${type}_${color}.png`;
 		});
 	});
-}
-loadImages();
+});
 
 function resetBoard() {
 	board = [
@@ -53,107 +49,89 @@ function resetBoard() {
 		[0,0,0,0,0,0,0,0,0],
 		[3,4,5,6,7,6,5,4,3],
 	];
+	turn = "r";
+	selected = null;
+	selectedMoves = [];
 }
 resetBoard();
 
 function renderBoard() {
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = "#ede995";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+	ctx.lineWidth = 2;
 	ctx.strokeStyle = "#000000";
 	ctx.beginPath();
+	
 	// Draw horizontal lines
 	for (let i = 0; i < 10; i++) {
-		let pos1 = getCanvasPos(0, i);
-		let pos2 = getCanvasPos(8, i);
-		ctx.moveTo(pos1[0], pos1[1]);
-		ctx.lineTo(pos2[0], pos2[1])
+		ctx.moveTo(...getCanvasPos(0, i));
+		ctx.lineTo(...getCanvasPos(8, i));
 	}
 	// Draw vertical lines and river
 	for (let i = 0; i < 9; i++) {
-		let pos1 = getCanvasPos(i, 0);
-		let pos4 = getCanvasPos(i, 9);
+		let top = getCanvasPos(i, 0), bottom = getCanvasPos(i, 9);
+		ctx.moveTo(...top);
 		if (i === 0 || i === 8) {
-			ctx.moveTo(pos1[0], pos1[1]);
-			ctx.lineTo(pos4[0], pos4[1]);
-			continue;
+			ctx.lineTo(...bottom);
+		} else {
+			ctx.lineTo(...getCanvasPos(i, 4));
+			ctx.moveTo(...getCanvasPos(i, 5));
+			ctx.lineTo(...bottom);
 		}
-		let pos2 = getCanvasPos(i, 4);
-		let pos3 = getCanvasPos(i, 5);
-		ctx.moveTo(pos1[0], pos1[1]);
-		ctx.lineTo(pos2[0], pos2[1]);
-		ctx.moveTo(pos3[0], pos3[1]);
-		ctx.lineTo(pos4[0], pos4[1]);
 	}
 	// Draw palace
-	let lines = [
-		[[3,0],[5,2]],
-		[[3,2],[5,0]],
-		[[3,7],[5,9]],
-		[[3,9],[5,7]],
-	];
-	lines.forEach(line => {
-		let pos1 = getCanvasPos(line[0][0], line[0][1]);
-		let pos2 = getCanvasPos(line[1][0], line[1][1]);
-		ctx.moveTo(pos1[0], pos1[1]);
-		ctx.lineTo(pos2[0], pos2[1]);
+	[ [[3,0],[5,2]], [[3,2],[5,0]], [[3,7],[5,9]], [[3,9],[5,7]] ].forEach(line => {
+		ctx.moveTo(...getCanvasPos(...line[0]));
+		ctx.lineTo(...getCanvasPos(...line[1]));
 	});
 	
 	ctx.stroke();
+	
 	// Draw pieces
 	for (let i = 0; i < 10; i++) {
 		for (let j = 0; j < 9; j++) {
 			let piece = board[i][j];	
 			if (piece === 0) { continue; }
 			
-			let pos = getCanvasPos(j, i);
+			let pos = getCanvasPos(j, i).map(coord => coord - pieceSize / 2);
 			let img = images[lang][getName(piece)][getCol(piece)];
-			const drawPiece = () => {
-				ctx.drawImage(
-					img,
-					pos[0] - pieceSize/2,
-					pos[1] - pieceSize/2,
-					pieceSize,
-					pieceSize
-				);
-			};
+			const drawPiece = () => ctx.drawImage(img, ...pos, pieceSize, pieceSize);
 			img.addEventListener("load", drawPiece);
 			if (img.complete) { drawPiece(); }
 		}
 	}
+	const drawCircle = (x, y, col) => {
+		let pos = getCanvasPos(x, y);
+		ctx.strokeStyle = col;
+		ctx.beginPath();
+		ctx.arc(...pos, pieceSize/2, 0, 2 * Math.PI);
+		ctx.stroke();
+	}
+	if (selected) { drawCircle(...selected, "#ffff00"); }
+	selectedMoves.forEach(move => drawCircle(...move, "#0000ff"));
 }
 function switchLang() {
 	lang = (lang == "en") ? "ch" : "en";
 	renderBoard();
 }
 
-const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
-const isSide = (p, y) => (p > 0) === (y > 4);
 function getMoves(x, y) {
 	let moves = [];
 	
 	let piece = board[y][x];
 	let col = getCol(piece);
-
+	
 	// A piece cannot move to a space occupied by an ally piece
 	let type = Math.abs(piece)
 	switch (type) {
 		case 1:
 			// Soldier - Moves forward and if it crosses the river, sideways too
 			let yNew = (col === "r") ? y-1 : y+1;
-			if (yNew >= 0 && yNew <= 9 && !isAlly(piece, board[yNew][x])) {
-				moves.push([x, yNew]);
-			}
+			if (yNew >= 0 && yNew <= 9 && !isAlly(piece, board[yNew][x])) { moves.push([x, yNew]); }
 			if (!isSide(piece, y)) {
-				let xLeft = x - 1;
-				let xRight = x + 1;
-				if (xLeft >= 0 && !isAlly(piece, board[y][xLeft])) {
-					moves.push([xLeft, y]);
-				}
-				if (xRight <= 8 && !isAlly(piece, board[y][xRight])) {
-					moves.push([xRight, y])
-				}
+				if (x >= 1 && !isAlly(piece, board[y][x-1])) { moves.push([x-1, y]); }
+				if (x <= 7 && !isAlly(piece, board[y][x+1])) { moves.push([x+1, y]); }
 			}
 			break;
 		case 2:
@@ -169,49 +147,31 @@ function getMoves(x, y) {
 			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river
 			for (let i = -1; i <= 1; i += 2) {
 				for (let j = -1; j <= 1; j += 2) {
-					let xBlock = x + i, yBlock = y + j;
-					if (xBlock < 0 || xBlock > 8 || yBlock < 0 || yBlock > 9) { continue; }
-					if (!isSide(piece, yBlock)) { continue; }
-					let xNew = x + 2*i, yNew = y + 2*j;
-					if (!isAlly(piece, board[yNew][xNew])) {
-						moves.push([xNew, yNew]);
-					}
+					if (x+i < 0 || x+i > 8 || y+j < 0 || y+j > 9 || !isSide(piece, y+j)) { continue; }
+					if (!isAlly(piece, board[y + 2*j][x + 2*i])) { moves.push([x + 2*i, y + 2*j]); }
 				}
 			}
 			break;
 		case 6:
 			// Advisor - Moves diagonally by one and stays in the palace
 			if (x === 4) {
-				// If it is at center of palace
 				for (let i = -1; i <= 1; i += 2) {
 					for (let j = -1; j <= 1; j += 2) {
-						let xNew = x + i, yNew = y + j;
-						if (!isAlly(piece, board[yNew][xNew])) {
-							moves.push([xNew, yNew]);
-						}
+						if (!isAlly(piece, board[y+j][x+i])) { moves.push([x+i, y+j]); }
 					}
 				}
 			} else {
-				let xNew = 4;
 				let yNew = (col === "r") ? 8 : 1;
-				if (!isAlly(piece, board[yNew][xNew])) {
-					moves.push([xNew, yNew]);
-				}
+				if (!isAlly(piece, board[yNew][4])) { moves.push([4, yNew]); }
 			}
 			break;
 		case 7:
 			// General - Moves orthogonally by one and stays in the palace
 			for (let i = -1; i <= 1; i += 2) {
-				let xNew = x + i;
-				if (xNew >= 3 && xNew <= 5 && !isAlly(piece, board[y][xNew])) {
-					moves.push([xNew, y]);
-				}
-				let yNew = y + i;
-				if (col === "r" && (yNew < 7 || yNew > 9)) { continue; }
-				if (col === "b" && (yNew < 0 || yNew > 2)) { continue; }
-				if (!isAlly(piece, board[yNew][x])) {
-					moves.push([x, yNew]);
-				}
+				if (x+i >= 3 && x+i <= 5 && !isAlly(piece, board[y][x+i])) { moves.push([x+i, y]); }
+				if (col === "r" && (y+i < 7 || y+i > 9)) { continue; }
+				if (col === "b" && (y+i < 0 || y+i > 2)) { continue; }
+				if (!isAlly(piece, board[y+i][x])) { moves.push([x, y+i]); }
 			}
 			break;
 	}
@@ -219,28 +179,36 @@ function getMoves(x, y) {
 }
 
 function select(x, y) {
-	if (board[y][x] === 0) { return; }
-	if (getCol(board[y][x]) !== turn) { return; }
-	selected = [x, y];
-
-	const drawCircle = (x, y, col) => {
-		let pos = getCanvasPos(x, y);
-		ctx.strokeStyle = col;
-		ctx.beginPath();
-		ctx.arc(pos[0], pos[1], pieceSize/2, 0, 2 * Math.PI);
-		ctx.stroke();
+	if (selected) {
+		if (selected[0] === x && selected[1] === y) {
+			// If the piece is selected twice, deselect it
+			selected = null;
+			selectedMoves = [];
+			renderBoard();
+		} else if (isAlly(board[selected[1]][selected[0]], board[y][x])) {
+			// If the new selected piece is an ally, select it
+			selected = null;
+			select(x, y);
+		}
 	}
-	renderBoard();
-	drawCircle(x, y, "#ffff00");
-	getMoves(x, y).forEach(move => drawCircle(move[0], move[1], "#0000ff"));
+	else if (board[y][x] !== 0 && getCol(board[y][x]) === turn) {
+		// Select the piece if it is valid
+		selected = [x, y];
+		selectedMoves = getMoves(x, y);
+		renderBoard();
+	}
 }
 function move(x, y) {
 	let selectedPiece = board[selected[1]][selected[0]];
-	if (isAlly(selectedPiece, board[y][x])) { select(x, y); return; }
-	if (getMoves(selected[0], selected[1]).some(move => move[0] === x && move[1] === y))  {
+	if (isAlly(selectedPiece, board[y][x])) {
+		// If the new selected piece is an ally, select it
+		select(x, y);
+	} else if (getMoves(selected[0], selected[1]).some(move => move[0] === x && move[1] === y)) {
+		// Move the piece if it is a valid move
 		board[selected[1]][selected[0]] = 0;
 		board[y][x] = selectedPiece;
 		selected = null;
+		selectedMoves = [];
 		turn = turn == "r" ? "b" : "r";
 		renderBoard();
 	}
@@ -253,15 +221,15 @@ canvas.addEventListener("click", (event) => {
 	let xGrid = Math.floor((x - xOffset + interval/2) / interval);
 	let yGrid = Math.floor((y - yOffset + interval/2) / interval);
 	if (xGrid < 0 || xGrid > 8 || yGrid < 0 || yGrid > 9) { return; }
-
+	
+	// Calculate whether click is in the piece's circular hitbox
 	let pos = getCanvasPos(xGrid, yGrid);
 	let dxSquared = (pos[0] - x) ** 2;
 	let dySquared = (pos[1] - y) ** 2;
 	let rSquared = (pieceSize / 2) ** 2;
 	if (dxSquared + dySquared > rSquared) { return; }
-
-	if (!selected) { select(xGrid, yGrid); }
-	else { move(xGrid, yGrid); }
+	
+	(!selected) ? select(xGrid, yGrid) : move(xGrid, yGrid);
 });
 
 renderBoard(board, lang);
