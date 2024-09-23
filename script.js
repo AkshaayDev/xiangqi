@@ -163,7 +163,7 @@ function getMoves(x, y) {
 			// Chariot - Moves and captures orthogonally
 			break;
 		case 4:
-			// Horse - Moves in an L shape but can be blocked by neighbouring pieces
+			// Horse - Moves in an L shape but can be blocked by neighbouring piece
 			break;
 		case 5:
 			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river
@@ -230,16 +230,20 @@ function select(x, y) {
 		ctx.arc(pos[0], pos[1], pieceSize/2, 0, 2 * Math.PI);
 		ctx.stroke();
 	}
+	renderBoard();
 	drawCircle(x, y, "#ffff00");
 	getMoves(x, y).forEach(move => drawCircle(move[0], move[1], "#0000ff"));
 }
 function move(x, y) {
 	let selectedPiece = board[selected[1]][selected[0]];
-	board[selected[1]][selected[0]] = 0;
-	board[y][x] = selectedPiece;
-	selected = null;
-	turn = turn == "r" ? "b" : "r";
-	renderBoard();
+	if (isAlly(selectedPiece, board[y][x])) { select(x, y); return; }
+	if (getMoves(selected[0], selected[1]).some(move => move[0] === x && move[1] === y))  {
+		board[selected[1]][selected[0]] = 0;
+		board[y][x] = selectedPiece;
+		selected = null;
+		turn = turn == "r" ? "b" : "r";
+		renderBoard();
+	}
 }
 
 canvas.addEventListener("click", (event) => {
