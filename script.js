@@ -23,8 +23,9 @@ const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
 const getName = (id) => types[Math.abs(id) - 1];
 const getCol = (id) => id > 0 ? "r" : "b";
 const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
-const isSide = (p, y) => (p > 0) === (y > 4);
+const isAtSide = (p, y) => (p > 0) === (y > 4);
 const isInBoard = (x, y) => x >= 0 && x <= 8 && y >= 0 && y <= 9;
+const isValid = (p, x, y) => isInBoard(x, y) && !isAlly(p, board[y][x]);
 
 langs.forEach(lang => {
 	images[lang] = {};
@@ -113,38 +114,42 @@ function renderBoard() {
 	selectedMoves.forEach(move => drawCircle(...move, "#0000ff"));
 }
 function switchLang() {
-	lang = (lang == "en") ? "ch" : "en";
+	lang = (lang === "en") ? "ch" : "en";
 	renderBoard();
 }
 
 function getMoves(x, y) {
+	const orthogonals = [ [0, -1], [0, 1], [-1, 0], [1, 0] ];
+	const diagonals = [ [-1, -1], [1, -1], [1, 1], [-1, 1] ];
+	
 	let moves = [];
 	
 	let piece = board[y][x];
 	let col = getCol(piece);
 	
 	// A piece cannot move to a space occupied by an ally piece
-	let type = Math.abs(piece)
-	switch (type) {
+	switch (Math.abs(piece)) {
 		case 1:
 			// Soldier - Moves forward and if it crosses the river, sideways too
 			let yNew = (col === "r") ? y-1 : y+1;
-			if (isInBoard(0, yNew) && !isAlly(piece, board[yNew][x])) { moves.push([x, yNew]); }
-			if (!isSide(piece, y)) {
+			if (isValid(piece, x, yNew)) { moves.push([x, yNew]); }
+			if (!isAtSide(piece, y)) {
 				if (x >= 1 && !isAlly(piece, board[y][x-1])) { moves.push([x-1, y]); }
 				if (x <= 7 && !isAlly(piece, board[y][x+1])) { moves.push([x+1, y]); }
 			}
 			break;
 		case 2:
 			// Cannon - Moves orthogonally but captures by crossing over exactly one piece
-			[ [0, -1], [0, 1], [-1, 0], [1, 0] ].forEach(([dx, dy]) => {
-				let jumped = false;
+			orthogonals.forEach(([dx, dy]) => {
+				let crossed = false;
 				let xNew = x + dx, yNew = y + dy;
 				while (isInBoard(xNew, yNew)) {
-					if (!jumped) {
+					if (!crossed) {
+						// If the path is not crossed yet, check if it gets crossed
 						if (board[yNew][xNew] === 0) { moves.push([xNew, yNew]); }
-						else { jumped = true; }
+						else { crossed = true; }
 					} else {
+						// If the path is crossed, only add the space if it is an enemy
 						if (isAlly(piece, board[yNew][xNew])) { break; }
 						if (board[yNew][xNew] !== 0) { moves.push([xNew, yNew]); break; }
 					}
@@ -155,7 +160,7 @@ function getMoves(x, y) {
 			break;
 		case 3:
 			// Chariot - Moves and captures orthogonally
-			[ [0, -1], [0, 1], [-1, 0], [1, 0] ].forEach(([dx, dy]) => {
+			orthogonals.forEach(([dx, dy]) => {
 				let xNew = x + dx, yNew = y + dy;
 				while (isInBoard(xNew, yNew)) {
 					if (board[yNew][xNew] === 0) { moves.push([xNew, yNew]); }
@@ -169,24 +174,26 @@ function getMoves(x, y) {
 		case 4:
 			// Horse - Moves in an L shape but can be blocked by neighbouring pieces
 			let block = [0, -1];
-			let posNew = [ [-1, -2], [1, -2] ]
-			for (let i = 0; i < 4; i++) {
+			let posNew = [ [-1, -2], [1, -2] ];
+			for (let i = 0; i < 4; i++) {	
+				// Check if path is empty and spaces are valid
+				let xBlock = x + block[0], yBlock = y + block[1];
+				if (isInBoard(xBlock, yBlock) && board[yBlock][xBlock] === 0) {
+					let xNew1 = x + posNew[0][0], yNew1 = y + posNew[0][1];
+					let xNew2 = x + posNew[1][0], yNew2 = y + posNew[1][1];
+					if (!isAlly(piece, board[yNew1][xNew1])) { moves.push([xNew1, yNew1]); }
+					if (!isAlly(piece, board[yNew2][xNew2])) { moves.push([xNew2, yNew2]); }
+				}
+				// 90 degree rotation for other directions
 				block = [block[1], -block[0]];
 				posNew = posNew.map(pos => [pos[1], -pos[0]]);
-				
-				let xBlock = x + block[0], yBlock = y + block[1];
-				if (!isInBoard(xBlock, yBlock) || board[yBlock][xBlock] !== 0) { continue; }
-				let xNew1 = x + posNew[0][0], yNew1 = y + posNew[0][1];
-				let xNew2 = x + posNew[1][0], yNew2 = y + posNew[1][1];
-				if (!isAlly(piece, board[yNew1][xNew1])) { moves.push([xNew1, yNew1]); }
-				if (!isAlly(piece, board[yNew2][xNew2])) { moves.push([xNew2, yNew2]); }
 			}
 			break;
 		case 5:
 			// Elephant - Moves diagonally by exactly two, can be blocked and cannot cross the river
 			for (let i = -1; i <= 1; i += 2) {
 				for (let j = -1; j <= 1; j += 2) {
-					if (!isInBoard(x+i, y+j) || !isSide(piece, y+j)) { continue; }
+					if (!isValid(piece, x+i, y+j)) { continue; }
 					if (!isAlly(piece, board[y + 2*j][x + 2*i])) { moves.push([x + 2*i, y + 2*j]); }
 				}
 			}
@@ -194,18 +201,19 @@ function getMoves(x, y) {
 		case 6:
 			// Advisor - Moves diagonally by one and stays in the palace
 			if (x === 4) {
-				for (let i = x-1; i <= x+1; i += 2) {
-					for (let j = y-1; j <= y+1; j += 2) {
-						if (!isAlly(piece, board[j][i])) { moves.push([i, j]); }
-					}
-				}
+				// If the advisor is at the center of the palace, it can move to a corner of the palace
+				diagonals.forEach(([dx, dy]) => {
+					if (!isAlly(piece, board[y+dy][x+dx])) { moves.push([x+dx, y+dy]); }
+				})
 			} else {
+				// Otherwise, it can only move to the center of the palace
 				let yNew = (col === "r") ? 8 : 1;
 				if (!isAlly(piece, board[yNew][4])) { moves.push([4, yNew]); }
 			}
 			break;
 		case 7:
 			// General - Moves orthogonally by one and stays in the palace
+			// The general can only move to neighbouring positions that are in the palace
 			for (let i = -1; i <= 1; i += 2) {
 				if (x+i >= 3 && x+i <= 5 && !isAlly(piece, board[y][x+i])) { moves.push([x+i, y]); }
 				if (col === "r" && (y+i < 7 || y+i > 9)) { continue; }
@@ -271,4 +279,4 @@ canvas.addEventListener("click", (event) => {
 	(!selected) ? select(xGrid, yGrid) : move(xGrid, yGrid);
 });
 
-renderBoard(board, lang);
+renderBoard();
