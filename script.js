@@ -24,6 +24,7 @@ const getName = (id) => types[Math.abs(id) - 1];
 const getCol = (id) => id > 0 ? "r" : "b";
 const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
 const isSide = (p, y) => (p > 0) === (y > 4);
+const isInBoard = (x, y) => x >= 0 && x <= 8 && y >= 0 && y <= 9;
 
 langs.forEach(lang => {
 	images[lang] = {};
@@ -128,26 +129,64 @@ function getMoves(x, y) {
 		case 1:
 			// Soldier - Moves forward and if it crosses the river, sideways too
 			let yNew = (col === "r") ? y-1 : y+1;
-			if (yNew >= 0 && yNew <= 9 && !isAlly(piece, board[yNew][x])) { moves.push([x, yNew]); }
+			if (isInBoard(0, yNew) && !isAlly(piece, board[yNew][x])) { moves.push([x, yNew]); }
 			if (!isSide(piece, y)) {
 				if (x >= 1 && !isAlly(piece, board[y][x-1])) { moves.push([x-1, y]); }
 				if (x <= 7 && !isAlly(piece, board[y][x+1])) { moves.push([x+1, y]); }
 			}
 			break;
 		case 2:
-			// Cannon - Moves orthogonally but captures by crossing over another piece
+			// Cannon - Moves orthogonally but captures by crossing over exactly one piece
+			[ [0, -1], [0, 1], [-1, 0], [1, 0] ].forEach(([dx, dy]) => {
+				let jumped = false;
+				let xNew = x + dx, yNew = y + dy;
+				while (isInBoard(xNew, yNew)) {
+					if (!jumped) {
+						if (board[yNew][xNew] === 0) { moves.push([xNew, yNew]); }
+						else { jumped = true; }
+					} else {
+						if (isAlly(piece, board[yNew][xNew])) { break; }
+						if (board[yNew][xNew] !== 0) { moves.push([xNew, yNew]); break; }
+					}
+					xNew += dx;
+					yNew += dy;
+				}
+			});
 			break;
 		case 3:
 			// Chariot - Moves and captures orthogonally
+			[ [0, -1], [0, 1], [-1, 0], [1, 0] ].forEach(([dx, dy]) => {
+				let xNew = x + dx, yNew = y + dy;
+				while (isInBoard(xNew, yNew)) {
+					if (board[yNew][xNew] === 0) { moves.push([xNew, yNew]); }
+					else if (isAlly(piece, board[yNew][xNew])) { break; }
+					else { moves.push([xNew, yNew]); break; }
+					xNew += dx;
+					yNew += dy;
+				}
+			});
 			break;
 		case 4:
-			// Horse - Moves in an L shape but can be blocked by neighbouring piece
+			// Horse - Moves in an L shape but can be blocked by neighbouring pieces
+			let block = [0, -1];
+			let posNew = [ [-1, -2], [1, -2] ]
+			for (let i = 0; i < 4; i++) {
+				block = [block[1], -block[0]];
+				posNew = posNew.map(pos => [pos[1], -pos[0]]);
+				
+				let xBlock = x + block[0], yBlock = y + block[1];
+				if (!isInBoard(xBlock, yBlock) || board[yBlock][xBlock] !== 0) { continue; }
+				let xNew1 = x + posNew[0][0], yNew1 = y + posNew[0][1];
+				let xNew2 = x + posNew[1][0], yNew2 = y + posNew[1][1];
+				if (!isAlly(piece, board[yNew1][xNew1])) { moves.push([xNew1, yNew1]); }
+				if (!isAlly(piece, board[yNew2][xNew2])) { moves.push([xNew2, yNew2]); }
+			}
 			break;
 		case 5:
-			// Elephant - Moves diagonally by two, can be blocked and cannot cross the river
+			// Elephant - Moves diagonally by exactly two, can be blocked and cannot cross the river
 			for (let i = -1; i <= 1; i += 2) {
 				for (let j = -1; j <= 1; j += 2) {
-					if (x+i < 0 || x+i > 8 || y+j < 0 || y+j > 9 || !isSide(piece, y+j)) { continue; }
+					if (!isInBoard(x+i, y+j) || !isSide(piece, y+j)) { continue; }
 					if (!isAlly(piece, board[y + 2*j][x + 2*i])) { moves.push([x + 2*i, y + 2*j]); }
 				}
 			}
@@ -155,9 +194,9 @@ function getMoves(x, y) {
 		case 6:
 			// Advisor - Moves diagonally by one and stays in the palace
 			if (x === 4) {
-				for (let i = -1; i <= 1; i += 2) {
-					for (let j = -1; j <= 1; j += 2) {
-						if (!isAlly(piece, board[y+j][x+i])) { moves.push([x+i, y+j]); }
+				for (let i = x-1; i <= x+1; i += 2) {
+					for (let j = y-1; j <= y+1; j += 2) {
+						if (!isAlly(piece, board[j][i])) { moves.push([i, j]); }
 					}
 				}
 			} else {
