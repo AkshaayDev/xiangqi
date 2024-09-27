@@ -125,13 +125,12 @@ function getMoves(x, y) {
 	let moves = [];
 	
 	let piece = board[y][x];
-	let col = getCol(piece);
 	
 	// A piece cannot move to a space occupied by an ally piece
 	switch (Math.abs(piece)) {
 		case 1:
 			// Soldier - Moves forward and if it crosses the river, sideways too
-			let yNew = (col === "r") ? y-1 : y+1;
+			let yNew = (piece > 0) ? y-1 : y+1;
 			if (isValid(piece, x, yNew)) { moves.push([x, yNew]); }
 			if (!isAtSide(piece, y)) {
 				if (x >= 1 && !isAlly(piece, board[y][x-1])) { moves.push([x-1, y]); }
@@ -207,7 +206,7 @@ function getMoves(x, y) {
 				})
 			} else {
 				// Otherwise, it can only move to the center of the palace
-				let yNew = (col === "r") ? 8 : 1;
+				let yNew = (piece > 0) ? 8 : 1;
 				if (!isAlly(piece, board[yNew][4])) { moves.push([4, yNew]); }
 			}
 			break;
@@ -216,8 +215,8 @@ function getMoves(x, y) {
 			// The general can only move to neighbouring positions that are in the palace
 			for (let i = -1; i <= 1; i += 2) {
 				if (x+i >= 3 && x+i <= 5 && !isAlly(piece, board[y][x+i])) { moves.push([x+i, y]); }
-				if (col === "r" && (y+i < 7 || y+i > 9)) { continue; }
-				if (col === "b" && (y+i < 0 || y+i > 2)) { continue; }
+				if (piece > 0 && (y+i < 7 || y+i > 9)) { continue; }
+				if (piece < 0 && (y+i < 0 || y+i > 2)) { continue; }
 				if (!isAlly(piece, board[y+i][x])) { moves.push([x, y+i]); }
 			}
 			break;
