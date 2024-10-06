@@ -3,7 +3,12 @@ const ctx = canvas.getContext("2d");
 
 // Config constants
 [canvas.width, canvas.height] = [600, 600];
-const [xOffset, yOffset, interval, pieceSize] = [70, 50, 50, 40];
+const xOffset = 70;
+const yOffset = 50;
+const interval = 50;
+const pieceSize = 40;
+const markingOffset = 5;
+const markingSize = 10;
 let images = {};
 
 // Game variables
@@ -60,7 +65,7 @@ resetBoard();
 function renderBoard() {
 	ctx.fillStyle = "#ede995";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+	
 	ctx.lineWidth = 2;
 	ctx.strokeStyle = "#000000";
 	ctx.beginPath();
@@ -87,8 +92,50 @@ function renderBoard() {
 		ctx.moveTo(...getCanvasPos(...line[0]));
 		ctx.lineTo(...getCanvasPos(...line[1]));
 	});
-	
+	// Draw soldier and cannon markings
+	[
+		[1,2],[7,2],
+		[0,3],[2,3],[4,3],[6,3],[8,3],
+		[0,6],[2,6],[4,6],[6,6],[8,6],
+		[1,7],[7,7]
+	].forEach(([x,y]) => {
+		let pos = getCanvasPos(x, y);
+		let o = markingOffset, s = markingSize;
+		let l1 = [[-o,-o],[-o,-o-s]]; // Start and end of line 1
+		let l2 = [[-o,-o],[-o-s,-o]]; // Start and end of line 2
+		
+		for (let i = 0; i < 4; i++) {
+			// Rotate the arm around the intersection
+			l1 = l1.map(p => [p[1], -p[0]]);
+			l2 = l2.map(p => [p[1], -p[0]]);
+			// Make sure the marking is within the board
+			let test = pos[0] + l1[0][0];
+			if (test <= xOffset || test > xOffset + 8 * interval) { continue; }
+			
+			ctx.moveTo(pos[0] + l1[0][0], pos[1] + l1[0][1]);
+			ctx.lineTo(pos[0] + l1[1][0], pos[1] + l1[1][1]);
+			ctx.moveTo(pos[0] + l2[0][0], pos[1] + l2[0][1]);
+			ctx.lineTo(pos[0] + l2[1][0], pos[1] + l2[1][1]);
+		}
+	});
 	ctx.stroke();
+	
+	// Draw characters
+	ctx.fillStyle = "#000000";
+	ctx.font = "32px Arial";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "middle";
+	let drawText = (text, x, y, rotation) => {
+		ctx.save();
+		ctx.translate(...getCanvasPos(x, y));
+		ctx.rotate(rotation);
+		ctx.fillText(text, 0, 0);
+		ctx.restore();
+	}
+	drawText("楚", 1.5, 4.5, -Math.PI / 2);
+	drawText("河", 2.5, 4.5, -Math.PI / 2);
+	drawText("漢", 6.5, 4.5, Math.PI / 2);
+	drawText("界", 5.5, 4.5, Math.PI / 2);
 	
 	// Draw pieces
 	for (let i = 0; i < 10; i++) {
