@@ -263,8 +263,8 @@ function getMoves(x, y) {
 					// Add each of the two positions if it is valid
 					let xNew1 = x + posNew[0][0], yNew1 = y + posNew[0][1];
 					let xNew2 = x + posNew[1][0], yNew2 = y + posNew[1][1];
-					if (!isAlly(piece, board[yNew1][xNew1])) { moves.push([xNew1, yNew1]); }
-					if (!isAlly(piece, board[yNew2][xNew2])) { moves.push([xNew2, yNew2]); }
+					if (isValid(piece, xNew1, yNew1)) { moves.push([xNew1, yNew1]); }
+					if (isValid(piece, xNew2, yNew2)) { moves.push([xNew2, yNew2]); }
 				}
 				// 90 degree rotation for other 4 cardinal directions
 				block = [block[1], -block[0]];
