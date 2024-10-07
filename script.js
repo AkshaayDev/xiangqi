@@ -24,13 +24,27 @@ const colors = ["r", "b"];
 const langs = ["ch", "en"];
 
 // Helper functions
-const getCanvasPos = (x, y) => [xOffset + x * interval, yOffset + y * interval];
-const getName = (id) => types[Math.abs(id) - 1];
-const getCol = (id) => id > 0 ? "r" : "b";
-const isAlly = (p1, p2) => p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0);
-const isAtSide = (p, y) => (p > 0) === (y > 4);
-const isInBoard = (x, y) => x >= 0 && x <= 8 && y >= 0 && y <= 9;
-const isValid = (p, x, y) => isInBoard(x, y) && !isAlly(p, board[y][x]);
+function getCanvasPos(x, y) { return [xOffset + x * interval, yOffset + y * interval]; }
+function getGridPos(x, y) {
+	const rect = canvas.getBoundingClientRect();
+	let xGrid = Math.floor((x - rect.left - xOffset + interval/2) / interval);
+	let yGrid = Math.floor((y - rect.top - yOffset + interval/2) / interval);
+	if (xGrid < 0 || xGrid > 8 || yGrid < 0 || yGrid > 9) { return [-1,-1]; }
+
+	let pos = getCanvasPos(xGrid, yGrid);
+	let dxSquared = (pos[0] - x) ** 2;
+	let dySquared = (pos[1] - y) ** 2;
+	let rSquared = (pieceSize / 2) ** 2;
+	if (dxSquared + dySquared > rSquared) { return [-1,-1]; }
+
+	return [xGrid, yGrid];
+}
+function getName(id) { return types[Math.abs(id) - 1]; }
+function getCol(id) { return id > 0 ? "r" : "b"; }
+function isAlly(p1, p2) { return p1 !== 0 && p2 !== 0 && (p1 > 0 === p2 > 0); }
+function isAtSide(p, y) { return (p > 0) === (y > 4); }
+function isInBoard(x, y) { return x >= 0 && x <= 8 && y >= 0 && y <= 9; }
+function isValid(p, x, y) { return isInBoard(x, y) && !isAlly(p, board[y][x]); }
 
 langs.forEach(lang => {
 	images[lang] = {};
@@ -62,14 +76,8 @@ function resetBoard() {
 }
 resetBoard();
 
-function renderBoard() {
-	ctx.fillStyle = "#ede995";
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	
-	ctx.lineWidth = 2;
-	ctx.strokeStyle = "#000000";
+function drawGrid() {
 	ctx.beginPath();
-	
 	// Draw horizontal lines
 	for (let i = 0; i < 10; i++) {
 		ctx.moveTo(...getCanvasPos(0, i));
@@ -92,6 +100,27 @@ function renderBoard() {
 		ctx.moveTo(...getCanvasPos(...line[0]));
 		ctx.lineTo(...getCanvasPos(...line[1]));
 	});
+	ctx.stroke();
+}
+function drawCharacters() {
+	function drawText(text, x, y, rotation) {
+		ctx.save();
+		ctx.translate(...getCanvasPos(x, y));
+		ctx.rotate(rotation);
+		ctx.fillText(text, 0, 0);
+		ctx.restore();
+	}
+	ctx.fillStyle = "#000000";
+	ctx.font = "32px Arial";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "middle";
+	drawText("楚", 1.5, 4.5, -Math.PI / 2);
+	drawText("河", 2.5, 4.5, -Math.PI / 2);
+	drawText("漢", 6.5, 4.5, Math.PI / 2);
+	drawText("界", 5.5, 4.5, Math.PI / 2);
+}
+function drawMarkings() {
+	ctx.beginPath();
 	// Draw soldier and cannon markings
 	[
 		[1,2],[7,2],
@@ -103,15 +132,15 @@ function renderBoard() {
 		let o = markingOffset, s = markingSize;
 		let l1 = [[-o,-o],[-o,-o-s]]; // Start and end of line 1
 		let l2 = [[-o,-o],[-o-s,-o]]; // Start and end of line 2
-		
+
 		for (let i = 0; i < 4; i++) {
-			// Rotate the arm around the intersection
+			// Rotate the arm around the intersection by 90 degrees
 			l1 = l1.map(p => [p[1], -p[0]]);
 			l2 = l2.map(p => [p[1], -p[0]]);
 			// Make sure the marking is within the board
 			let test = pos[0] + l1[0][0];
 			if (test <= xOffset || test > xOffset + 8 * interval) { continue; }
-			
+
 			ctx.moveTo(pos[0] + l1[0][0], pos[1] + l1[0][1]);
 			ctx.lineTo(pos[0] + l1[1][0], pos[1] + l1[1][1]);
 			ctx.moveTo(pos[0] + l2[0][0], pos[1] + l2[0][1]);
@@ -119,38 +148,25 @@ function renderBoard() {
 		}
 	});
 	ctx.stroke();
-	
-	// Draw characters
-	ctx.fillStyle = "#000000";
-	ctx.font = "32px Arial";
-	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-	let drawText = (text, x, y, rotation) => {
-		ctx.save();
-		ctx.translate(...getCanvasPos(x, y));
-		ctx.rotate(rotation);
-		ctx.fillText(text, 0, 0);
-		ctx.restore();
+}
+function drawPieces() {
+	function drawPiece(img, pos) {
+		ctx.drawImage(img, ...pos, pieceSize, pieceSize);
 	}
-	drawText("楚", 1.5, 4.5, -Math.PI / 2);
-	drawText("河", 2.5, 4.5, -Math.PI / 2);
-	drawText("漢", 6.5, 4.5, Math.PI / 2);
-	drawText("界", 5.5, 4.5, Math.PI / 2);
-	
-	// Draw pieces
 	for (let i = 0; i < 10; i++) {
 		for (let j = 0; j < 9; j++) {
 			let piece = board[i][j];	
 			if (piece === 0) { continue; }
-			
+
 			let pos = getCanvasPos(j, i).map(coord => coord - pieceSize / 2);
 			let img = images[lang][getName(piece)][getCol(piece)];
-			const drawPiece = () => ctx.drawImage(img, ...pos, pieceSize, pieceSize);
-			img.addEventListener("load", drawPiece);
-			if (img.complete) { drawPiece(); }
+			img.addEventListener("load", () => drawPiece(img, pos));
+			if (img.complete) { drawPiece(img, pos); }
 		}
 	}
-	const drawCircle = (x, y, col) => {
+}
+function drawAnnotations() {
+	function drawCircle(x, y, col) {
 		let pos = getCanvasPos(x, y);
 		ctx.strokeStyle = col;
 		ctx.beginPath();
@@ -159,6 +175,19 @@ function renderBoard() {
 	}
 	if (selected) { drawCircle(...selected, "#ffff00"); }
 	selectedMoves.forEach(move => drawCircle(...move, "#0000ff"));
+}
+
+function renderBoard() {
+	ctx.fillStyle = "#ede995";
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "#000000";
+
+	drawGrid();
+	drawCharacters();
+	drawMarkings();
+	drawPieces();
+	drawAnnotations();
 }
 function switchLang() {
 	lang = (lang === "en") ? "ch" : "en";
@@ -173,12 +202,14 @@ function getMoves(x, y) {
 	
 	let piece = board[y][x];
 	
-	// A piece cannot move to a space occupied by an ally piece
+	// A piece cannot move to a position occupied by an ally piece
+	// A position is considered valid if if is empty or occupied by an enemy and within the board
 	switch (Math.abs(piece)) {
 		case 1:
 			// Soldier - Moves forward and if it crosses the river, sideways too
 			let yNew = (piece > 0) ? y-1 : y+1;
 			if (isValid(piece, x, yNew)) { moves.push([x, yNew]); }
+			// Check positions at the side if it is at the other side (crossed the river)
 			if (!isAtSide(piece, y)) {
 				if (x >= 1 && !isAlly(piece, board[y][x-1])) { moves.push([x-1, y]); }
 				if (x <= 7 && !isAlly(piece, board[y][x+1])) { moves.push([x+1, y]); }
@@ -209,8 +240,11 @@ function getMoves(x, y) {
 			orthogonals.forEach(([dx, dy]) => {
 				let xNew = x + dx, yNew = y + dy;
 				while (isInBoard(xNew, yNew)) {
+					// If it is an empty space, add the position and continue
 					if (board[yNew][xNew] === 0) { moves.push([xNew, yNew]); }
+					// If the first piece encountered is an ally, stop
 					else if (isAlly(piece, board[yNew][xNew])) { break; }
+					// If the first piece encountered is an enemy, add the position and stop
 					else { moves.push([xNew, yNew]); break; }
 					xNew += dx;
 					yNew += dy;
@@ -224,13 +258,15 @@ function getMoves(x, y) {
 			for (let i = 0; i < 4; i++) {	
 				// Check if path is empty and spaces are valid
 				let xBlock = x + block[0], yBlock = y + block[1];
+				// Make sure the blocking position is empty and in the board
 				if (isInBoard(xBlock, yBlock) && board[yBlock][xBlock] === 0) {
+					// Add each of the two positions if it is valid
 					let xNew1 = x + posNew[0][0], yNew1 = y + posNew[0][1];
 					let xNew2 = x + posNew[1][0], yNew2 = y + posNew[1][1];
 					if (!isAlly(piece, board[yNew1][xNew1])) { moves.push([xNew1, yNew1]); }
 					if (!isAlly(piece, board[yNew2][xNew2])) { moves.push([xNew2, yNew2]); }
 				}
-				// 90 degree rotation for other directions
+				// 90 degree rotation for other 4 cardinal directions
 				block = [block[1], -block[0]];
 				posNew = posNew.map(pos => [pos[1], -pos[0]]);
 			}
@@ -239,7 +275,8 @@ function getMoves(x, y) {
 			// Elephant - Moves diagonally by exactly two, can be blocked and cannot cross the river
 			for (let i = -1; i <= 1; i += 2) {
 				for (let j = -1; j <= 1; j += 2) {
-					if (!isValid(piece, x+i, y+j)) { continue; }
+					// Ignore the diagonal if it is blocked or if the blocking position crossed the river
+					if (!isValid(piece, x+i, y+j) || !isAtSide(piece, y+j)) { continue; }
 					if (!isAlly(piece, board[y + 2*j][x + 2*i])) { moves.push([x + 2*i, y + 2*j]); }
 				}
 			}
@@ -261,6 +298,7 @@ function getMoves(x, y) {
 			// General - Moves orthogonally by one and stays in the palace
 			// The general can only move to neighbouring positions that are in the palace
 			for (let i = -1; i <= 1; i += 2) {
+				// Adds neighbouring positions if they are valid
 				if (x+i >= 3 && x+i <= 5 && !isAlly(piece, board[y][x+i])) { moves.push([x+i, y]); }
 				if (piece > 0 && (y+i < 7 || y+i > 9)) { continue; }
 				if (piece < 0 && (y+i < 0 || y+i > 2)) { continue; }
@@ -298,8 +336,10 @@ function move(x, y) {
 		select(x, y);
 	} else if (getMoves(selected[0], selected[1]).some(move => move[0] === x && move[1] === y)) {
 		// Move the piece if it is a valid move
+		// Set the selected position to be empty and move the piece to the new position
 		board[selected[1]][selected[0]] = 0;
 		board[y][x] = selectedPiece;
+		// Unselect the piece and switch turn
 		selected = null;
 		selectedMoves = [];
 		turn = turn == "r" ? "b" : "r";
@@ -308,21 +348,10 @@ function move(x, y) {
 }
 
 canvas.addEventListener("click", (event) => {
-	const rect = canvas.getBoundingClientRect();
-	let x = event.clientX - rect.left;
-	let y = event.clientY - rect.top;
-	let xGrid = Math.floor((x - xOffset + interval/2) / interval);
-	let yGrid = Math.floor((y - yOffset + interval/2) / interval);
-	if (xGrid < 0 || xGrid > 8 || yGrid < 0 || yGrid > 9) { return; }
-	
-	// Calculate whether click is in the piece's circular hitbox
-	let pos = getCanvasPos(xGrid, yGrid);
-	let dxSquared = (pos[0] - x) ** 2;
-	let dySquared = (pos[1] - y) ** 2;
-	let rSquared = (pieceSize / 2) ** 2;
-	if (dxSquared + dySquared > rSquared) { return; }
-	
-	(!selected) ? select(xGrid, yGrid) : move(xGrid, yGrid);
+	[x, y] = getGridPos(event.clientX, event.clientY);
+	if (x < 0) return;
+
+	(!selected) ? select(x, y) : move(x, y);
 });
 
 renderBoard();
